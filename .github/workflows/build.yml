@@ -14,13 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Patch python-for-android for new pip
+      - name: Pre-clone and patch python-for-android
         run: |
-          # Свежий pip (>=25) удалил BuildDependencyInstallError, на который жёстко
-          # ссылается p4a. Заменяем голый import на getattr-фолбэк с заглушкой.
-          P4A_BASE=$(python3 -c "import glob; d=glob.glob('/home/user/.venv/lib/python3*/site-packages/pythonforandroid'); print(d[0] if d else '')")
-          echo "p4a at: $P4A_BASE"
-          FILES=$(grep -rl 'from pip._internal.exceptions import BuildDependencyInstallError' "$P4A_BASE" 2>/dev/null)
+          P4A_DIR="$PWD/.buildozer/android/platform/python-for-android"
+          mkdir -p "$(dirname "$P4A_DIR")"
+          [ -d "$P4A_DIR/.git" ] || git clone --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
+          echo "p4a at: $P4A_DIR"
+          FILES=$(grep -rl 'from pip._internal.exceptions import BuildDependencyInstallError' "$P4A_DIR" 2>/dev/null || true)
           echo "files: $FILES"
           for f in $FILES; do
             sudo sed -i \
