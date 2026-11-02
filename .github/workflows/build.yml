@@ -15,16 +15,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Downgrade pip in buildozer venv (p4a compat)
+      - name: Pre-clone + patch python-for-android
         run: |
-          python3 --version
-          /home/user/.venv/bin/python3 --version
-          # p4a падает с BuildDependencyInstallError на свежем pip (>=25).
-          # Понижаем pip в том venv, из которого buildozer запускает p4a.
-          /home/user/.venv/bin/python3 -m pip install --upgrade 'pip<24' || true
-          /home/user/.venv/bin/python3 -m pip --version
-          # то же для системного python, чтобы p4a-venv унаследовал старый pip
-          python3 -m pip install --upgrade 'pip<24' || true
+          P4A_DIR="$PWD/.buildozer/android/platform/python-for-android"
+          mkdir -p "$(dirname "$P4A_DIR")"
+          if [ ! -d "$P4A_DIR/.git" ]; then
+            git clone --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
+          fi
+          echo "p4a dir: $P4A_DIR"
+          # Надёжная замена через python (sed/grep хрупки к пробелам).
+          python3 - "$P4A_DIR" <<'PYEOF'
+import os, sys
+base = sys.argv[1]
+old = "from pip._internal.exceptions import BuildDependencyInstallError"
+new = "import pip._internal.exceptions as _pie; BuildDependencyInstallError = getattr(_pie, 'BuildDependencyInstallError', Exception)"
+found = []
+for root, dirs, files in os.walk(base):
+    if '.git' in root:
+        continue
+    for fn in files:
+        if not fn.endswith('.py'):
+            continue
+        p = os.path.join(root, fn)
+        try:
+            with open(p, encoding='utf-8') as f:
+                s = f.read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if old in s:
+            s2 = s.replace(old, new)
+            with open(p, 'w', encoding='utf-8') as f:
+                f.write(s2)
+            found.append(p)
+print("patched:", found)
+PYEOF
 
       - name: Build APK
         run: |
