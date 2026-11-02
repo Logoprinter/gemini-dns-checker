@@ -1,6 +1,5 @@
 name: build-apk
-
-on:
+"on":
   workflow_dispatch:
   push:
     tags:
@@ -23,27 +22,7 @@ jobs:
             git clone --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
           fi
           echo "p4a dir: $P4A_DIR"
-          # Надёжная замена через python (путь через env, чтобы не путаться в кавычках).
-          export P4A_PATCH_DIR="$P4A_DIR"
-          python3 -c '
-import os
-base = os.environ["P4A_PATCH_DIR"]
-old = "from pip._internal.exceptions import BuildDependencyInstallError"
-new = "import pip._internal.exceptions as _pie; BuildDependencyInstallError = getattr(_pie, \"BuildDependencyInstallError\", Exception)"
-found = []
-for root, dirs, files in os.walk(base):
-    if ".git" in root: continue
-    for fn in files:
-        if not fn.endswith(".py"): continue
-        p = os.path.join(root, fn)
-        try:
-            s = open(p, encoding="utf-8").read()
-        except (OSError, UnicodeDecodeError): continue
-        if old in s:
-            open(p, "w", encoding="utf-8").write(s.replace(old, new))
-            found.append(p)
-print("patched:", found)
-'
+          python3 patch_p4a.py "$P4A_DIR"
 
       - name: Build APK
         run: |
