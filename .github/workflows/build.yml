@@ -41,7 +41,15 @@ jobs:
           yes | sudo "$SDKMANAGER" --licenses || true
           # p4a требует build-tools 37; убедимся, что они стоят в системный SDK
           yes | sudo "$SDKMANAGER" --install "build-tools;37.0.0" "platform-tools" "platforms;android-33" || true
+          # p4a ищет sdkmanager по СТАРОМУ пути tools/bin; создадим симлинки для совместимости
+          sudo mkdir -p "$ANDROID_HOME/tools/bin"
+          sudo ln -sf "$SDKMANAGER" "$ANDROID_HOME/tools/bin/sdkmanager"
+          # avdmanager тоже пусть будет доступен, если понадобится
+          AVDMANAGER=$(find "$ANDROID_HOME" -name avdmanager -type f 2>/dev/null | head -1)
+          [ -n "$AVDMANAGER" ] && sudo ln -sf "$AVDMANAGER" "$ANDROID_HOME/tools/bin/avdmanager"
           ls "$ANDROID_HOME/build-tools" || true
+          echo "--- sdkmanager at old path? ---"
+          ls -la "$ANDROID_HOME/tools/bin/" || true
 
       - name: Build APK
         env:
