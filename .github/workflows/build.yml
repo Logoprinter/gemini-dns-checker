@@ -1,0 +1,47 @@
+name: build-apk
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake autopoint build-essential \
+            ccache git libtool libncurses5-dev libssl-dev libtinfo5 \
+            python3-venv zlib1g-dev pkg-config bash wget patch \
+            libffi-dev libffi8 unzip
+
+      - name: Install Buildozer
+        run: |
+          python3 -m venv ~/.venv
+          echo "PATH=$HOME/.venv/bin:$PATH" >> "$GITHUB_ENV"
+          ~/.venv/bin/pip install --upgrade pip
+          ~/.venv/bin/pip install buildozer
+
+      - name: Build APK
+        env:
+          GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+        run: |
+          buildozer android debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: bin/*.apk
+          if-no-files-found: error
