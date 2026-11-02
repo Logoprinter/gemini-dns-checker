@@ -34,6 +34,17 @@ jobs:
           # это работает в системном python, но НЕ в venv, поэтому venv не используем.
           echo "PATH=$HOME/.local/bin:$PATH" >> "$GITHUB_ENV"
 
+      - name: Accept Android SDK licenses
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME" -name sdkmanager -type f 2>/dev/null | head -1)
+          echo "sdkmanager: $SDKMANAGER"
+          if [ -n "$SDKMANAGER" ]; then
+            yes | sudo "$SDKMANAGER" --licenses >/dev/null || true
+            yes | sudo "$SDKMANAGER" --update >/dev/null || true
+          else
+            echo "warning: sdkmanager not found"
+          fi
+
       - name: Build APK
         env:
           GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
