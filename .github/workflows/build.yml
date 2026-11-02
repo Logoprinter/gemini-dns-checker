@@ -14,6 +14,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Patch python-for-android for new pip
+        run: |
+          # Свежий pip (>=25) удалил BuildDependencyInstallError, на который жёстко
+          # ссылается p4a. Заменяем голый import на getattr-фолбэк с заглушкой.
+          P4A_BASE=$(python3 -c "import glob; d=glob.glob('/home/user/.venv/lib/python3*/site-packages/pythonforandroid'); print(d[0] if d else '')")
+          echo "p4a at: $P4A_BASE"
+          FILES=$(grep -rl 'from pip._internal.exceptions import BuildDependencyInstallError' "$P4A_BASE" 2>/dev/null)
+          echo "files: $FILES"
+          for f in $FILES; do
+            sudo sed -i \
+              's/^from pip._internal.exceptions import BuildDependencyInstallError$/import pip._internal.exceptions as _pie; BuildDependencyInstallError = getattr(_pie, "BuildDependencyInstallError", Exception)/' \
+              "$f" || true
+          done
+          grep -n 'BuildDependencyInstallError' $FILES 2>/dev/null | head
+
       - name: Build APK
         run: |
           yes | buildozer -v android debug
