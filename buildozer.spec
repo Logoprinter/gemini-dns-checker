@@ -17,9 +17,8 @@ android.archs = arm64-v8a, armeabi-v7a
 android.allow_backup = 0
 android.private_storage = 1
 android.add_src = false
-# использовать системный Android SDK GitHub runner (лицензии уже приняты),
-# а не скачивать отдельную копию под ~/.buildozer
-android.sdk_path = /usr/local/lib/android/sdk
+# В docker-образе kivy/buildozer SDK/NDK/лицензии уже предустановлены и
+# совместимы с p4a; явные пути не задаём — buildozer возьмёт свои.
 
 [buildozer]
 log_level = 2

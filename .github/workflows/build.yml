@@ -9,57 +9,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    container:
+      image: kivy/buildozer:latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Install system deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y autoconf automake autopoint build-essential \
-            ccache git libtool libssl-dev \
-            python3-venv zlib1g-dev pkg-config bash wget patch \
-            curl zip unzip
-
-      - name: Install Buildozer
-        run: |
-          /usr/bin/python3 --version
-          # Фикс для p4a: свежий pip (>=25) удалил BuildDependencyInstallError.
-          # Держим pip<25 на системном python — тогда p4a находит этот класс.
-          # (python специально НЕ переключаем: смена /usr/bin/python3 ломает apt_pkg)
-          /usr/bin/python3 -m pip install --upgrade 'pip<25'
-          /usr/bin/python3 -m pip install --upgrade buildozer
-          # p4a/Buildozer ставят свои зависимости через pip --user:
-          # это работает в системном python, но НЕ в venv, поэтому venv не используем.
-          echo "PATH=$HOME/.local/bin:$PATH" >> "$GITHUB_ENV"
-
-      - name: Prepare Android SDK (accept licenses + add build-tools)
-        run: |
-          SDKMANAGER=$(find "$ANDROID_HOME" -name sdkmanager -type f 2>/dev/null | head -1)
-          echo "sdkmanager: $SDKMANAGER"
-          yes | sudo "$SDKMANAGER" --licenses || true
-          # p4a требует build-tools 37; убедимся, что они стоят в системный SDK
-          yes | sudo "$SDKMANAGER" --install "build-tools;37.0.0" "platform-tools" "platforms;android-33" || true
-          # p4a ищет sdkmanager по СТАРОМУ пути tools/bin; создадим симлинки для совместимости
-          sudo mkdir -p "$ANDROID_HOME/tools/bin"
-          sudo ln -sf "$SDKMANAGER" "$ANDROID_HOME/tools/bin/sdkmanager"
-          # avdmanager тоже пусть будет доступен, если понадобится
-          AVDMANAGER=$(find "$ANDROID_HOME" -name avdmanager -type f 2>/dev/null | head -1)
-          [ -n "$AVDMANAGER" ] && sudo ln -sf "$AVDMANAGER" "$ANDROID_HOME/tools/bin/avdmanager"
-          ls "$ANDROID_HOME/build-tools" || true
-          echo "--- sdkmanager at old path? ---"
-          ls -la "$ANDROID_HOME/tools/bin/" || true
-
       - name: Build APK
-        env:
-          GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
         run: |
-          buildozer android debug
+          buildozer -v android debug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
