@@ -10,14 +10,24 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     container:
-      image: kivy/buildozer:1.4.0
+      image: kivy/buildozer:latest
       options: --user root
     steps:
       - uses: actions/checkout@v4
 
+      - name: Downgrade pip in buildozer venv (p4a compat)
+        run: |
+          python3 --version
+          /home/user/.venv/bin/python3 --version
+          # p4a падает с BuildDependencyInstallError на свежем pip (>=25).
+          # Понижаем pip в том venv, из которого buildozer запускает p4a.
+          /home/user/.venv/bin/python3 -m pip install --upgrade 'pip<24' || true
+          /home/user/.venv/bin/python3 -m pip --version
+          # то же для системного python, чтобы p4a-venv унаследовал старый pip
+          python3 -m pip install --upgrade 'pip<24' || true
+
       - name: Build APK
         run: |
-          # стабильный образ: тут p4a/pip совместимые; auto-answer root-промпт
           yes | buildozer -v android debug
 
       - name: Upload APK artifact
