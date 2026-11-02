@@ -28,10 +28,11 @@ jobs:
 
       - name: Install Buildozer
         run: |
-          python3 -m venv ~/.venv
-          echo "PATH=$HOME/.venv/bin:$PATH" >> "$GITHUB_ENV"
-          ~/.venv/bin/pip install --upgrade pip
-          ~/.venv/bin/pip install buildozer
+          sudo python3 -m pip install --upgrade pip
+          sudo python3 -m pip install --upgrade buildozer
+          # p4a/Buildozer ставят свои зависимости через pip --user:
+          # это работает в системном python, но НЕ в venv, поэтому venv не используем.
+          echo "PATH=$HOME/.local/bin:$PATH" >> "$GITHUB_ENV"
 
       - name: Build APK
         env:
