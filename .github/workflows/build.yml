@@ -16,11 +16,19 @@ jobs:
 
       - name: Patch installed python-for-android for new pip
         run: |
-          # buildozer использует p4a как site-package из venv образа.
-          P4A_BASE=$(python3 -c "import sysconfig,sys; print(sysconfig.get_paths()['purelib'] + '/pythonforandroid')")
-          echo "p4a at: $P4A_BASE"
-          [ -d "$P4A_BASE" ] || { echo "p4a dir missing"; exit 1; }
-          FILES=$(grep -rl 'from pip._internal.exceptions import BuildDependencyInstallError' "$P4A_BASE" 2>/dev/null || true)
+          # buildozer запускает p4a как модуль; найдём его реальный путь через import.
+          P4A_DIR=$(/home/user/.venv/bin/python3 -c "import pythonforandroid, os; print(os.path.dirname(pythonforandroid.__file__))" 2>/dev/null)
+          if [ -z "$P4A_DIR" ]; then
+            # python3 в PATH может отличаться; попробуем через дистрибутив buildozer
+            P4A_DIR=$(python3 -c "import pythonforandroid, os; print(os.path.dirname(pythonforandroid.__file__))" 2>/dev/null)
+          fi
+          if [ -z "$P4A_DIR" ]; then
+            # последняя надежда — поиск по всему диску (исключая .buildozer и proc)
+            P4A_DIR=$(find / -type d -name pythonforandroid -not -path '*/.buildozer/*' -not -path '/proc/*' 2>/dev/null | head -1)
+          fi
+          [ -z "$P4A_DIR" ] && { echo "pythonforandroid not found"; exit 1; }
+          echo "p4a dir: $P4A_DIR"
+          FILES=$(grep -rl 'from pip._internal.exceptions import BuildDependencyInstallError' "$P4A_DIR" 2>/dev/null || true)
           echo "files: $FILES"
           for f in $FILES; do
             sudo sed -i \
