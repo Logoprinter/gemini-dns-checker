@@ -10,35 +10,14 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     container:
-      image: kivy/buildozer:latest
+      image: kivy/buildozer:1.4.0
+      options: --user root
     steps:
       - uses: actions/checkout@v4
 
-      - name: Patch installed python-for-android for new pip
-        run: |
-          # buildozer запускает p4a как модуль; найдём его реальный путь через import.
-          P4A_DIR=$(/home/user/.venv/bin/python3 -c "import pythonforandroid, os; print(os.path.dirname(pythonforandroid.__file__))" 2>/dev/null)
-          if [ -z "$P4A_DIR" ]; then
-            # python3 в PATH может отличаться; попробуем через дистрибутив buildozer
-            P4A_DIR=$(python3 -c "import pythonforandroid, os; print(os.path.dirname(pythonforandroid.__file__))" 2>/dev/null)
-          fi
-          if [ -z "$P4A_DIR" ]; then
-            # последняя надежда — поиск по всему диску (исключая .buildozer и proc)
-            P4A_DIR=$(find / -type d -name pythonforandroid -not -path '*/.buildozer/*' -not -path '/proc/*' 2>/dev/null | head -1)
-          fi
-          [ -z "$P4A_DIR" ] && { echo "pythonforandroid not found"; exit 1; }
-          echo "p4a dir: $P4A_DIR"
-          FILES=$(grep -rl 'from pip._internal.exceptions import BuildDependencyInstallError' "$P4A_DIR" 2>/dev/null || true)
-          echo "files: $FILES"
-          for f in $FILES; do
-            sudo sed -i \
-              's/^from pip._internal.exceptions import BuildDependencyInstallError$/import pip._internal.exceptions as _pie; BuildDependencyInstallError = getattr(_pie, "BuildDependencyInstallError", Exception)/' \
-              "$f" || true
-          done
-          grep -rn 'BuildDependencyInstallError' $FILES 2>/dev/null | head
-
       - name: Build APK
         run: |
+          # стабильный образ: тут p4a/pip совместимые; auto-answer root-промпт
           yes | buildozer -v android debug
 
       - name: Upload APK artifact
