@@ -18,20 +18,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Python 3.11 (system-wide for p4a)
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Make python3 point to 3.11
-        run: |
-          PY311=$(which python3)
-          echo "python3 = $PY311"
-          python3 --version
-          # p4a зовёт жёсткий путь /usr/bin/python3; переопределим его на наш 3.11
-          sudo ln -sf "$PY311" /usr/bin/python3
-          /usr/bin/python3 --version
-
       - name: Install system deps
         run: |
           sudo apt-get update
@@ -43,9 +29,10 @@ jobs:
       - name: Install Buildozer
         run: |
           /usr/bin/python3 --version
-          # Фикс для p4a: свежий pip(>=25) удалил BuildDependencyInstallError.
-          # Держим pip<24 и python 3.11 (не 3.14) — проверенная рабочая связка.
-          /usr/bin/python3 -m pip install --upgrade 'pip<24'
+          # Фикс для p4a: свежий pip (>=25) удалил BuildDependencyInstallError.
+          # Держим pip<25 на системном python — тогда p4a находит этот класс.
+          # (python специально НЕ переключаем: смена /usr/bin/python3 ломает apt_pkg)
+          /usr/bin/python3 -m pip install --upgrade 'pip<25'
           /usr/bin/python3 -m pip install --upgrade buildozer
           # p4a/Buildozer ставят свои зависимости через pip --user:
           # это работает в системном python, но НЕ в venv, поэтому venv не используем.
