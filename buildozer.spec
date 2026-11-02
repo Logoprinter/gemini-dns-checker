@@ -17,6 +17,9 @@ android.archs = arm64-v8a, armeabi-v7a
 android.allow_backup = 0
 android.private_storage = 1
 android.add_src = false
+# использовать системный Android SDK GitHub runner (лицензии уже приняты),
+# а не скачивать отдельную копию под ~/.buildozer
+android.sdk_path = /usr/local/lib/android/sdk
 
 [buildozer]
 log_level = 2
