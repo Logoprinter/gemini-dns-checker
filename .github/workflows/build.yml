@@ -14,20 +14,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Pre-clone and patch python-for-android
+      - name: Patch installed python-for-android for new pip
         run: |
-          P4A_DIR="$PWD/.buildozer/android/platform/python-for-android"
-          mkdir -p "$(dirname "$P4A_DIR")"
-          [ -d "$P4A_DIR/.git" ] || git clone --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
-          echo "p4a at: $P4A_DIR"
-          FILES=$(grep -rl 'from pip._internal.exceptions import BuildDependencyInstallError' "$P4A_DIR" 2>/dev/null || true)
+          # buildozer использует p4a как site-package из venv образа.
+          P4A_BASE=$(python3 -c "import sysconfig,sys; print(sysconfig.get_paths()['purelib'] + '/pythonforandroid')")
+          echo "p4a at: $P4A_BASE"
+          [ -d "$P4A_BASE" ] || { echo "p4a dir missing"; exit 1; }
+          FILES=$(grep -rl 'from pip._internal.exceptions import BuildDependencyInstallError' "$P4A_BASE" 2>/dev/null || true)
           echo "files: $FILES"
           for f in $FILES; do
             sudo sed -i \
               's/^from pip._internal.exceptions import BuildDependencyInstallError$/import pip._internal.exceptions as _pie; BuildDependencyInstallError = getattr(_pie, "BuildDependencyInstallError", Exception)/' \
               "$f" || true
           done
-          grep -n 'BuildDependencyInstallError' $FILES 2>/dev/null | head
+          grep -rn 'BuildDependencyInstallError' $FILES 2>/dev/null | head
 
       - name: Build APK
         run: |
