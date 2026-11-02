@@ -23,32 +23,27 @@ jobs:
             git clone --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
           fi
           echo "p4a dir: $P4A_DIR"
-          # Надёжная замена через python (sed/grep хрупки к пробелам).
-          python3 - "$P4A_DIR" <<'PYEOF'
-import os, sys
-base = sys.argv[1]
+          # Надёжная замена через python (путь через env, чтобы не путаться в кавычках).
+          export P4A_PATCH_DIR="$P4A_DIR"
+          python3 -c '
+import os
+base = os.environ["P4A_PATCH_DIR"]
 old = "from pip._internal.exceptions import BuildDependencyInstallError"
-new = "import pip._internal.exceptions as _pie; BuildDependencyInstallError = getattr(_pie, 'BuildDependencyInstallError', Exception)"
+new = "import pip._internal.exceptions as _pie; BuildDependencyInstallError = getattr(_pie, \"BuildDependencyInstallError\", Exception)"
 found = []
 for root, dirs, files in os.walk(base):
-    if '.git' in root:
-        continue
+    if ".git" in root: continue
     for fn in files:
-        if not fn.endswith('.py'):
-            continue
+        if not fn.endswith(".py"): continue
         p = os.path.join(root, fn)
         try:
-            with open(p, encoding='utf-8') as f:
-                s = f.read()
-        except (OSError, UnicodeDecodeError):
-            continue
+            s = open(p, encoding="utf-8").read()
+        except (OSError, UnicodeDecodeError): continue
         if old in s:
-            s2 = s.replace(old, new)
-            with open(p, 'w', encoding='utf-8') as f:
-                f.write(s2)
+            open(p, "w", encoding="utf-8").write(s.replace(old, new))
             found.append(p)
 print("patched:", found)
-PYEOF
+'
 
       - name: Build APK
         run: |
