@@ -28,14 +28,14 @@ jobs:
       - name: Install buildozer with pip<24
         run: |
           python3 -m pip install --upgrade "pip<24"
-          python3 -m pip install buildozer
+          python3 -m pip install buildozer==1.5.0
 
       - name: Pre-clone + patch python-for-android (pinned tag)
         run: |
           P4A_DIR="$PWD/.buildozer/android/platform/python-for-android"
           mkdir -p "$(dirname "$P4A_DIR")"
           if [ ! -d "$P4A_DIR/.git" ]; then
-            git clone --depth 1 --branch v2026.05.09 https://github.com/kivy/python-for-android.git "$P4A_DIR"
+            git clone --depth 1 --branch v2024.01.21 https://github.com/kivy/python-for-android.git "$P4A_DIR"
           fi
           python3 patch_p4a.py "$P4A_DIR"
 
