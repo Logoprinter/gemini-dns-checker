@@ -1,45 +1,52 @@
 import os
+import re
 import sys
-
-# p4a / buildozer РґРѕ СЃРёС… РїРѕСЂ РёРЅРѕРіРґР° РїР°РґР°СЋС‚ РЅР° pip>=24 РёР·-Р·Р° СѓРґР°Р»С‘РЅРЅС‹С…
-# РїСЂРёРІР°С‚РЅС‹С… API (capture_logging, BuildDependencyInstallError). РЎС‚Р°РІРёРј
-# СЃРѕРІРјРµСЃС‚РёРјС‹Рµ РІРµСЂСЃРёРё Рё РїР°С‚С‡РёРј РѕСЃС‚Р°С‚РєРё РІ p4a, С‡С‚РѕР±С‹ РЅРµ С‚СЂРѕРіР°С‚СЊ С‡СѓР¶РѕР№ pip.
 
 base = sys.argv[1] if len(sys.argv) > 1 else "."
 found = []
 
+def patch_file(p, old, new):
+    try:
+        with open(p, encoding="utf-8") as f:
+            s = f.read()
+    except (OSError, UnicodeDecodeError):
+        return False
+    if old in s:
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(s.replace(old, new))
+        return True
+    return False
+
+
+# 1) p4a: BuildDependencyInstallError РјРѕР¶РµС‚ РѕС‚СЃСѓС‚СЃС‚РІРѕРІР°С‚СЊ РІ РЅРѕРІС‹С… pip
+old1 = "from pip._internal.exceptions import BuildDependencyInstallError"
+new1 = ("import pip._internal.exceptions as _pie; "
+        "BuildDependencyInstallError = getattr(_pie, "
+        "'BuildDependencyInstallError', Exception)")
+
+# 2) pip СЃР°Рј (installer.py) РІ pip>=24 РёРјРїРѕСЂС‚РёСЂСѓРµС‚ СѓРґР°Р»С‘РЅРЅС‹Р№ capture_logging
+old2 = "from pip._internal.utils.logging import VERBOSE, capture_logging"
+new2 = ("import pip._internal.utils.logging as _l; "
+        "VERBOSE = getattr(_l, 'VERBOSE', None); "
+        "capture_logging = getattr(_l, 'capture_logging', "
+        "lambda *a, **k: (lambda f: f))")
+
 for root, dirs, files in os.walk(base):
-    if ".git" in root:
+    if ".git" in root or "/.buildozer/" in root + "/":
         continue
     for fn in files:
         if not fn.endswith(".py"):
             continue
         p = os.path.join(root, fn)
+        before = None
         try:
             with open(p, encoding="utf-8") as f:
-                s = f.read()
+                before = f.read()
         except (OSError, UnicodeDecodeError):
             continue
-        orig = s
-
-        # 1) BuildDependencyInstallError РјРѕР¶РµС‚ РѕС‚СЃСѓС‚СЃС‚РІРѕРІР°С‚СЊ РІ РЅРѕРІС‹С… pip
-        s = s.replace(
-            "from pip._internal.exceptions import BuildDependencyInstallError",
-            "import pip._internal.exceptions as _pie; "
-            "BuildDependencyInstallError = getattr(_pie, "
-            "'BuildDependencyInstallError', Exception)")
-
-        # 2) capture_logging СѓРґР°Р»С‘РЅ РІ pip>=24. Р”Р°С‘Рј Р·Р°РіР»СѓС€РєСѓ.
-        s = s.replace(
-            "from pip._internal.utils.logging import VERBOSE, capture_logging",
-            "import pip._internal.utils.logging as _l; "
-            "VERBOSE = getattr(_l, 'VERBOSE', None); "
-            "capture_logging = getattr(_l, 'capture_logging', "
-            "lambda *a, **k: (lambda f: f))")
-
-        if s != orig:
-            with open(p, "w", encoding="utf-8") as f:
-                f.write(s)
+        a = patch_file(p, old1, new1)
+        b = patch_file(p, old2, new2)
+        if a or b:
             found.append(p)
 
 print("patched:", found)
