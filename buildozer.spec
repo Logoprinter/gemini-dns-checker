@@ -17,8 +17,10 @@ android.archs = arm64-v8a, armeabi-v7a
 android.allow_backup = 0
 android.private_storage = 1
 android.add_src = false
-# В docker-образе kivy/buildozer SDK/NDK/лицензии уже предустановлены и
-# совместимы с p4a; явные пути не задаём — buildozer возьмёт свои.
+
+# p4a: С„РёРєСЃРёСЂСѓРµРј СЃС‚Р°Р±РёР»СЊРЅСѓСЋ РІРµСЂСЃРёСЋ (python3.11), РіРґРµ pip<24 СЃРѕС…СЂР°РЅСЏРµС‚
+# capture_logging Рё СЃРѕР±РёСЂР°СЋС‚СЃСЏ recipes РёР· РёСЃС…РѕРґРЅРёРєРѕРІ Р±РµР· android-wheel РїСЂРѕР±Р»РµРј.
+p4a.branch = v2024.01.21
 
 [buildozer]
 log_level = 2
