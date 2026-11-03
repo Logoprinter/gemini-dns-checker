@@ -8,11 +8,27 @@ name: build-apk
 jobs:
   build:
     runs-on: ubuntu-22.04
-    container:
-      image: kivy/buildozer:latest
-      options: --user root
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf automake autopoint build-essential ccache \
+            git libtool libncurses5-dev libssl-dev libtinfo5 \
+            python3-venv zlib1g-dev pkg-config wget patch unzip zip \
+            libffi-dev libffi8
+
+      - name: Install buildozer with pip<24
+        run: |
+          python3 -m pip install --upgrade "pip<24"
+          python3 -m pip install buildozer
 
       - name: Pre-clone + patch python-for-android
         run: |
@@ -21,7 +37,6 @@ jobs:
           if [ ! -d "$P4A_DIR/.git" ]; then
             git clone --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
           fi
-          echo "p4a dir: $P4A_DIR"
           python3 patch_p4a.py "$P4A_DIR"
 
       - name: Build APK
